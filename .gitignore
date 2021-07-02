@@ -1,5 +1,6 @@
-**/node_modules
-**/package-lock.json
-**/build
+node_modules
+migrations
+build
+package-lock.json
 .env
 .DS_Store

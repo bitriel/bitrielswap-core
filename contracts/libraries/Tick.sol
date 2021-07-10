@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.5.0;
 
-import '@openzeppelin/contracts/utils/SafeCast.sol';
+import './SafeCast.sol';
 import './LowGasSafeMath.sol';
 import './TickMath.sol';
 import './LiquidityMath.sol';

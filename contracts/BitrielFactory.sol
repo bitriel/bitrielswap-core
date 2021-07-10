@@ -39,7 +39,7 @@ contract BitrielFactory is IBitrielFactory, BitrielPoolDeployer, NoDelegateCall 
         (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         require(token0 != address(0));
         int24 tickSpacing = feeAmountTickSpacing[fee];
-        require(tickSpacing != 0);
+        // require(tickSpacing != 0);
         require(getPool[token0][token1][fee] == address(0));
         pool = deploy(address(this), token0, token1, fee, tickSpacing);
         getPool[token0][token1][fee] = pool;

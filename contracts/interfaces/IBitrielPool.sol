@@ -5,9 +5,8 @@ import './pool/IBitrielPoolImmutables.sol';
 import './pool/IBitrielPoolState.sol';
 import './pool/IBitrielPoolDerivedState.sol';
 import './pool/IBitrielPoolActions.sol';
-// import './pool/IBitrielPoolOwnerActions.sol';
+import './pool/IBitrielPoolOwnerActions.sol';
 import './pool/IBitrielPoolEvents.sol';
-    // IBitrielPoolOwnerActions,
 
 /// @title The interface for a Bitriel Pool
 /// @notice A Bitriel pool facilitates swapping and automated market making between any two assets that strictly conform
@@ -18,6 +17,7 @@ interface IBitrielPool is
     IBitrielPoolState,
     IBitrielPoolDerivedState,
     IBitrielPoolActions,
+    IBitrielPoolOwnerActions,
     IBitrielPoolEvents
 {
 

@@ -1,6 +1,6 @@
 {
   "name": "dev-bitrielswap-core",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Core smart contract for Bitriel",
   "license": "BUSL-1.1",
   "author": "hangleang",
@@ -30,7 +30,6 @@
     "node": ">=10"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^3.4.1-solc-0.7-2",
     "@truffle/hdwallet-provider": "^1.4.1",
     "dotenv": "^10.0.0"
   },

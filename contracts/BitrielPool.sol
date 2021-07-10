@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.7.6;
 
-import '@openzeppelin/contracts/utils/SafeCast.sol';
-import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import './base/NoDelegateCall.sol';
-import './interfaces/IBitrielPool.sol';
+
 import './libraries/LowGasSafeMath.sol';
 import './libraries/Tick.sol';
 import './libraries/TickBitmap.sol';
@@ -17,8 +14,14 @@ import './libraries/TickMath.sol';
 import './libraries/LiquidityMath.sol';
 import './libraries/SqrtPriceMath.sol';
 import './libraries/SwapMath.sol';
+import './libraries/SafeCast.sol';
+import './libraries/TransferHelper.sol';
+
+import './interfaces/IBitrielPool.sol';
+import './interfaces/IERC20Minimal.sol';
 import './interfaces/IBitrielPoolDeployer.sol';
 import './interfaces/IBitrielFactory.sol';
+
 import './interfaces/callback/IBitrielMintCallback.sol';
 import './interfaces/callback/IBitrielSwapCallback.sol';
 import './interfaces/callback/IBitrielFlashCallback.sol';
@@ -28,13 +31,6 @@ contract BitrielPool is IBitrielPool, NoDelegateCall {
     using LowGasSafeMath for int256;
     using SafeCast for uint256;
     using SafeCast for int256;
-    using FullMath for uint256;
-    using LiquidityMath for uint128;
-    using SqrtPriceMath for uint160;
-    using SwapMath for uint160;
-    using TickMath for uint160;
-    using TickMath for int24;
-    using SafeERC20 for IERC20;
     using Tick for mapping(int24 => Tick.Info);
     using TickBitmap for mapping(int16 => uint256);
     using Position for mapping(bytes32 => Position.Info);
@@ -137,7 +133,7 @@ contract BitrielPool is IBitrielPool, NoDelegateCall {
     /// check
     function balance0() private view returns (uint256) {
         (bool success, bytes memory data) =
-            token0.staticcall(abi.encodeWithSelector(IERC20.balanceOf.selector, address(this)));
+            token0.staticcall(abi.encodeWithSelector(IERC20Minimal.balanceOf.selector, address(this)));
         require(success && data.length >= 32);
         return abi.decode(data, (uint256));
     }
@@ -147,7 +143,7 @@ contract BitrielPool is IBitrielPool, NoDelegateCall {
     /// check
     function balance1() private view returns (uint256) {
         (bool success, bytes memory data) =
-            token1.staticcall(abi.encodeWithSelector(IERC20.balanceOf.selector, address(this)));
+            token1.staticcall(abi.encodeWithSelector(IERC20Minimal.balanceOf.selector, address(this)));
         require(success && data.length >= 32);
         return abi.decode(data, (uint256));
     }
@@ -269,7 +265,7 @@ contract BitrielPool is IBitrielPool, NoDelegateCall {
     function initialize(uint160 sqrtPriceX96) external override {
         require(slot0.sqrtPriceX96 == 0, 'AI');
 
-        int24 tick = sqrtPriceX96.getTickAtSqrtRatio();
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         (uint16 cardinality, uint16 cardinalityNext) = observations.initialize(uint32(block.timestamp));
 
@@ -325,8 +321,9 @@ contract BitrielPool is IBitrielPool, NoDelegateCall {
             if (_slot0.tick < params.tickLower) {
                 // current tick is below the passed range; liquidity can only become in range by crossing from left to
                 // right, when we'll need _more_ token0 (it's becoming more valuable) so user must provide it
-                amount0 = params.tickLower.getSqrtRatioAtTick().getAmount0Delta(
-                    params.tickUpper.getSqrtRatioAtTick(),
+                amount0 = SqrtPriceMath.getAmount0Delta(
+                    TickMath.getSqrtRatioAtTick(params.tickLower),
+                    TickMath.getSqrtRatioAtTick(params.tickUpper),
                     params.liquidityDelta
                 );
             } else if (_slot0.tick < params.tickUpper) {
@@ -343,21 +340,24 @@ contract BitrielPool is IBitrielPool, NoDelegateCall {
                     _slot0.observationCardinalityNext
                 );
 
-                amount0 = _slot0.sqrtPriceX96.getAmount0Delta(
-                    params.tickUpper.getSqrtRatioAtTick(),
+                amount0 = SqrtPriceMath.getAmount0Delta(
+                    _slot0.sqrtPriceX96,
+                    TickMath.getSqrtRatioAtTick(params.tickUpper),
                     params.liquidityDelta
                 );
-                amount1 = params.tickLower.getSqrtRatioAtTick().getAmount1Delta(
+                amount1 = SqrtPriceMath.getAmount1Delta(
+                    TickMath.getSqrtRatioAtTick(params.tickLower),
                     _slot0.sqrtPriceX96,
                     params.liquidityDelta
                 );
 
-                liquidity = liquidityBefore.addDelta(params.liquidityDelta);
+                liquidity = LiquidityMath.addDelta(liquidityBefore, params.liquidityDelta);
             } else {
                 // current tick is above the passed range; liquidity can only become in range by crossing from right to
                 // left, when we'll need _more_ token1 (it's becoming more valuable) so user must provide it
-                amount1 = params.tickLower.getSqrtRatioAtTick().getAmount1Delta(
-                    params.tickUpper.getSqrtRatioAtTick(),
+                amount1 = SqrtPriceMath.getAmount1Delta(
+                    TickMath.getSqrtRatioAtTick(params.tickLower),
+                    TickMath.getSqrtRatioAtTick(params.tickUpper),
                     params.liquidityDelta
                 );
             }
@@ -495,11 +495,11 @@ contract BitrielPool is IBitrielPool, NoDelegateCall {
 
         if (amount0 > 0) {
             position.tokensOwed0 -= amount0;
-            IERC20(token0).safeTransfer(recipient, amount0);
+            TransferHelper.safeTransfer(token0, recipient, amount0);
         }
         if (amount1 > 0) {
             position.tokensOwed1 -= amount1;
-            IERC20(token1).safeTransfer(recipient, amount1);
+            TransferHelper.safeTransfer(token1, recipient, amount1);
         }
 
         emit Collect(msg.sender, recipient, tickLower, tickUpper, amount0, amount1);
@@ -650,10 +650,11 @@ contract BitrielPool is IBitrielPool, NoDelegateCall {
             }
 
             // get the price for the next tick
-            step.sqrtPriceNextX96 = step.tickNext.getSqrtRatioAtTick();
+            step.sqrtPriceNextX96 = TickMath.getSqrtRatioAtTick(step.tickNext);
 
             // compute values to swap to the target tick, price limit, or point where input/output amount is exhausted
-            (state.sqrtPriceX96, step.amountIn, step.amountOut, step.feeAmount) = state.sqrtPriceX96.computeSwapStep(
+            (state.sqrtPriceX96, step.amountIn, step.amountOut, step.feeAmount) = SwapMath.computeSwapStep(
+                state.sqrtPriceX96,
                 (zeroForOne ? step.sqrtPriceNextX96 < sqrtPriceLimitX96 : step.sqrtPriceNextX96 > sqrtPriceLimitX96)
                     ? sqrtPriceLimitX96
                     : step.sqrtPriceNextX96,
@@ -679,7 +680,7 @@ contract BitrielPool is IBitrielPool, NoDelegateCall {
 
             // update global fee tracker
             if (state.liquidity > 0)
-                state.feeGrowthGlobalX128 += step.feeAmount.mulDiv(FixedPoint128.Q128, state.liquidity);
+                state.feeGrowthGlobalX128 += FullMath.mulDiv(step.feeAmount, FixedPoint128.Q128, state.liquidity);
 
             // shift tick if we reached the next price
             if (state.sqrtPriceX96 == step.sqrtPriceNextX96) {
@@ -711,13 +712,13 @@ contract BitrielPool is IBitrielPool, NoDelegateCall {
                     // safe because liquidityNet cannot be type(int128).min
                     if (zeroForOne) liquidityNet = -liquidityNet;
 
-                    state.liquidity = state.liquidity.addDelta(liquidityNet);
+                    state.liquidity = LiquidityMath.addDelta(state.liquidity, liquidityNet);
                 }
 
                 state.tick = zeroForOne ? step.tickNext - 1 : step.tickNext;
             } else if (state.sqrtPriceX96 != step.sqrtPriceStartX96) {
                 // recompute unless we're on a lower tick boundary (i.e. already transitioned ticks), and haven't moved
-                state.tick = state.sqrtPriceX96.getTickAtSqrtRatio();
+                state.tick = TickMath.getTickAtSqrtRatio(state.sqrtPriceX96);
             }
         }
 
@@ -762,13 +763,13 @@ contract BitrielPool is IBitrielPool, NoDelegateCall {
 
         // do the transfers and collect payment
         if (zeroForOne) {
-            if (amount1 < 0) IERC20(token1).safeTransfer(recipient, uint256(-amount1));
+            if (amount1 < 0) TransferHelper.safeTransfer(token1, recipient, uint256(-amount1));
 
             uint256 balance0Before = balance0();
             IBitrielSwapCallback(msg.sender).swapCallback(amount0, amount1, data);
             require(balance0Before.add(uint256(amount0)) <= balance0(), 'IIA');
         } else {
-            if (amount0 < 0) IERC20(token0).safeTransfer(recipient, uint256(-amount0));
+            if (amount0 < 0) TransferHelper.safeTransfer(token0, recipient, uint256(-amount0));
 
             uint256 balance1Before = balance1();
             IBitrielSwapCallback(msg.sender).swapCallback(amount0, amount1, data);
@@ -789,13 +790,13 @@ contract BitrielPool is IBitrielPool, NoDelegateCall {
         uint128 _liquidity = liquidity;
         require(_liquidity > 0, 'L');
 
-        uint256 fee0 = amount0.mulDivRoundingUp(fee, 1e6);
-        uint256 fee1 = amount1.mulDivRoundingUp(fee, 1e6);
+        uint256 fee0 = FullMath.mulDivRoundingUp(amount0, fee, 1e6);
+        uint256 fee1 = FullMath.mulDivRoundingUp(amount1, fee, 1e6);
         uint256 balance0Before = balance0();
         uint256 balance1Before = balance1();
 
-        if (amount0 > 0) IERC20(token0).safeTransfer(recipient, amount0);
-        if (amount1 > 0) IERC20(token1).safeTransfer(recipient, amount1);
+        if (amount0 > 0) TransferHelper.safeTransfer(token0, recipient, amount0);
+        if (amount1 > 0) TransferHelper.safeTransfer(token1, recipient, amount1);
 
         IBitrielFlashCallback(msg.sender).flashCallback(fee0, fee1, data);
 
@@ -813,49 +814,49 @@ contract BitrielPool is IBitrielPool, NoDelegateCall {
             uint8 feeProtocol0 = slot0.feeProtocol % 16;
             uint256 fees0 = feeProtocol0 == 0 ? 0 : paid0 / feeProtocol0;
             if (uint128(fees0) > 0) protocolFees.token0 += uint128(fees0);
-            feeGrowthGlobal0X128 += (paid0 - fees0).mulDiv(FixedPoint128.Q128, _liquidity);
+            feeGrowthGlobal0X128 += FullMath.mulDiv(paid0 - fees0, FixedPoint128.Q128, _liquidity);
         }
         if (paid1 > 0) {
             uint8 feeProtocol1 = slot0.feeProtocol >> 4;
             uint256 fees1 = feeProtocol1 == 0 ? 0 : paid1 / feeProtocol1;
             if (uint128(fees1) > 0) protocolFees.token1 += uint128(fees1);
-            feeGrowthGlobal1X128 += (paid1 - fees1).mulDiv(FixedPoint128.Q128, _liquidity);
+            feeGrowthGlobal1X128 += FullMath.mulDiv(paid1 - fees1, FixedPoint128.Q128, _liquidity);
         }
 
         emit Flash(msg.sender, recipient, amount0, amount1, paid0, paid1);
     }
 
-    // /// @inheritdoc IBitrielPoolOwnerActions
-    // function setFeeProtocol(uint8 feeProtocol0, uint8 feeProtocol1) external override lock onlyFactoryOwner {
-    //     require(
-    //         (feeProtocol0 == 0 || (feeProtocol0 >= 4 && feeProtocol0 <= 10)) &&
-    //             (feeProtocol1 == 0 || (feeProtocol1 >= 4 && feeProtocol1 <= 10))
-    //     );
-    //     uint8 feeProtocolOld = slot0.feeProtocol;
-    //     slot0.feeProtocol = feeProtocol0 + (feeProtocol1 << 4);
-    //     emit SetFeeProtocol(feeProtocolOld % 16, feeProtocolOld >> 4, feeProtocol0, feeProtocol1);
-    // }
+    /// @inheritdoc IBitrielPoolOwnerActions
+    function setFeeProtocol(uint8 feeProtocol0, uint8 feeProtocol1) external override lock onlyFactoryOwner {
+        require(
+            (feeProtocol0 == 0 || (feeProtocol0 >= 4 && feeProtocol0 <= 10)) &&
+                (feeProtocol1 == 0 || (feeProtocol1 >= 4 && feeProtocol1 <= 10))
+        );
+        uint8 feeProtocolOld = slot0.feeProtocol;
+        slot0.feeProtocol = feeProtocol0 + (feeProtocol1 << 4);
+        emit SetFeeProtocol(feeProtocolOld % 16, feeProtocolOld >> 4, feeProtocol0, feeProtocol1);
+    }
 
-    // /// @inheritdoc IBitrielPoolOwnerActions
-    // function collectProtocol(
-    //     address recipient,
-    //     uint128 amount0Requested,
-    //     uint128 amount1Requested
-    // ) external override lock onlyFactoryOwner returns (uint128 amount0, uint128 amount1) {
-    //     amount0 = amount0Requested > protocolFees.token0 ? protocolFees.token0 : amount0Requested;
-    //     amount1 = amount1Requested > protocolFees.token1 ? protocolFees.token1 : amount1Requested;
+    /// @inheritdoc IBitrielPoolOwnerActions
+    function collectProtocol(
+        address recipient,
+        uint128 amount0Requested,
+        uint128 amount1Requested
+    ) external override lock onlyFactoryOwner returns (uint128 amount0, uint128 amount1) {
+        amount0 = amount0Requested > protocolFees.token0 ? protocolFees.token0 : amount0Requested;
+        amount1 = amount1Requested > protocolFees.token1 ? protocolFees.token1 : amount1Requested;
 
-    //     if (amount0 > 0) {
-    //         if (amount0 == protocolFees.token0) amount0--; // ensure that the slot is not cleared, for gas savings
-    //         protocolFees.token0 -= amount0;
-    //         IERC20(token0).safeTransfer(recipient, amount0);
-    //     }
-    //     if (amount1 > 0) {
-    //         if (amount1 == protocolFees.token1) amount1--; // ensure that the slot is not cleared, for gas savings
-    //         protocolFees.token1 -= amount1;
-    //         IERC20(token1).safeTransfer(recipient, amount1);
-    //     }
+        if (amount0 > 0) {
+            if (amount0 == protocolFees.token0) amount0--; // ensure that the slot is not cleared, for gas savings
+            protocolFees.token0 -= amount0;
+            TransferHelper.safeTransfer(token0, recipient, amount0);
+        }
+        if (amount1 > 0) {
+            if (amount1 == protocolFees.token1) amount1--; // ensure that the slot is not cleared, for gas savings
+            protocolFees.token1 -= amount1;
+            TransferHelper.safeTransfer(token1, recipient, amount1);
+        }
 
-    //     emit CollectProtocol(msg.sender, recipient, amount0, amount1);
-    // }
+        emit CollectProtocol(msg.sender, recipient, amount0, amount1);
+    }
 }

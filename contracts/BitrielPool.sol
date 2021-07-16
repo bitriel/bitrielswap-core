@@ -306,7 +306,7 @@ contract BitrielPool is IBitrielPool, NoDelegateCall {
             int256 amount1
         )
     {
-        checkTicks(params.tickUpper, params.tickLower);
+        checkTicks(params.tickLower, params.tickUpper);
         Slot0 memory _slot0 = slot0; // SLOAD for gas optimization
 
         position = _updatePosition(

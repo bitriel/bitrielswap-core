@@ -1,10 +1,9 @@
 {
   "name": "dev-bitrielswap-core",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Core smart contract for Bitriel",
   "license": "BUSL-1.1",
   "author": "hangleang",
-  "main": "truffle-config.js",
   "directories": {
     "test": "test"
   },

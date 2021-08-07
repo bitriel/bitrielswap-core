@@ -1,20 +1,18 @@
 {
-  "name": "dev-bitrielswap-core",
-  "version": "1.0.3",
+  "name": "@bitriel/bitrielswap-core",
+  "version": "1.0.0",
   "description": "Core smart contract for Bitriel",
   "license": "BUSL-1.1",
-  "author": "hangleang",
   "directories": {
     "test": "test"
   },
   "keywords": [
     "bitrielswap",
-    "dex",
     "core"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/hangleang/dev-bitrielswap-core.git"
+    "url": "https://github.com/bitriel/bitrielswap-core.git"
   },
   "files": [
     "contracts/interfaces",

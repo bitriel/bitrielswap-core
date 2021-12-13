@@ -62,7 +62,7 @@ module.exports = {
     // selendra
     selendraTestnet: {
       provider: () => new HDWalletProvider(process.env.MNEMONIC, `https://rpc.testnet.selendra.org/`),
-      network_id: 2000,
+      network_id: 222,
     }
     // Useful for testing. The `development` name is special - truffle uses it by default
     // if it's defined here and no other network is specified at the command line.

@@ -12,7 +12,7 @@
  * to sign your transactions before they're sent to a remote public node. Infura accounts
  * are available for free at: infura.io/register.
  *
- * You'll also need a mnemonic - the twelve word phrase the wallet uses to generate
+ * You'll also need a PRIVATE_KEY - the twelve word phrase the wallet uses to generate
  * public/private key pairs. If you're publishing your code to GitHub make sure you load this
  * phrase from a file you've .gitignored so it doesn't accidentally become public.
  *
@@ -34,34 +34,34 @@ module.exports = {
 
   networks: {
     mainnet: {
-      provider: () => new HDWalletProvider(process.env.MNEMONIC, `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`),
+      provider: () => new HDWalletProvider(process.env.PRIVATE_KEY, `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`),
       network_id: 1,
     },
     ropsten: {
-      provider: () => new HDWalletProvider(process.env.MNEMONIC, `https://ropsten.infura.io/v3/${process.env.INFURA_API_KEY}`),
+      provider: () => new HDWalletProvider(process.env.PRIVATE_KEY, `https://ropsten.infura.io/v3/${process.env.INFURA_API_KEY}`),
       network_id: 3,
     },
     rinkeby: {
-      provider: () => new HDWalletProvider(process.env.MNEMONIC, `https://rinkeby.infura.io/v3/${process.env.INFURA_API_KEY}`),
+      provider: () => new HDWalletProvider(process.env.PRIVATE_KEY, `https://rinkeby.infura.io/v3/${process.env.INFURA_API_KEY}`),
       network_id: 4,
     },
     kovan: {
-      provider: () => new HDWalletProvider(process.env.MNEMONIC, `https://kovan.infura.io/v3/${process.env.INFURA_API_KEY}`),
+      provider: () => new HDWalletProvider(process.env.PRIVATE_KEY, `https://kovan.infura.io/v3/${process.env.INFURA_API_KEY}`),
       network_id: 42,
     },
     // bsc
     bsc: {
-      provider: () => new HDWalletProvider(process.env.MNEMONIC, `https://bsc-dataseed.binance.org`),
+      provider: () => new HDWalletProvider(process.env.PRIVATE_KEY, `https://bsc-dataseed.binance.org`),
       network_id: 56,
     },
     testnet: {
-      provider: () => new HDWalletProvider(process.env.MNEMONIC, `https://data-seed-prebsc-1-s1.binance.org:8545`),
+      provider: () => new HDWalletProvider(process.env.PRIVATE_KEY, `https://data-seed-prebsc-1-s1.binance.org:8545`),
       network_id: 97,
       timeoutBlocks: 200,
     },
     // selendra
     selendraTestnet: {
-      provider: () => new HDWalletProvider(process.env.MNEMONIC, `https://rpc.testnet.selendra.org/`),
+      provider: () => new HDWalletProvider(process.env.PRIVATE_KEY, `https://rpc.testnet.selendra.org/`),
       network_id: 222,
     }
     // Useful for testing. The `development` name is special - truffle uses it by default
@@ -87,7 +87,7 @@ module.exports = {
     // Useful for deploying to a public network.
     // NB: It's important to wrap the provider as a function.
     // ropsten: {
-    // provider: () => new HDWalletProvider(mnemonic, `https://ropsten.infura.io/v3/YOUR-PROJECT-ID`),
+    // provider: () => new HDWalletProvider(PRIVATE_KEY, `https://ropsten.infura.io/v3/YOUR-PROJECT-ID`),
     // network_id: 3,       // Ropsten's id
     // gas: 5500000,        // Ropsten has a lower block limit than mainnet
     // confirmations: 2,    // # of confs to wait between deployments. (default: 0)
@@ -96,7 +96,7 @@ module.exports = {
     // },
     // Useful for private networks
     // private: {
-    // provider: () => new HDWalletProvider(mnemonic, `https://network.io`),
+    // provider: () => new HDWalletProvider(PRIVATE_KEY, `https://network.io`),
     // network_id: 2111,   // This network is yours, in the cloud.
     // production: true    // Treats this network as if it was a public net. (default: false)
     // }

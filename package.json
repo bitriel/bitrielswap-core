@@ -1,6 +1,6 @@
 {
   "name": "@bitriel/bitrielswap-core",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Core smart contract for Bitriel",
   "license": "BUSL-1.1",
   "directories": {

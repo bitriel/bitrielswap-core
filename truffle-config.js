@@ -59,9 +59,9 @@ module.exports = {
       network_id: 97,
       timeoutBlocks: 200,
     },
-    // selendra
-    selendraTestnet: {
-      provider: () => new HDWalletProvider(process.env.PRIVATE_KEY, `https://rpc.testnet.selendra.org/`),
+    // indra
+    indraTest: {
+      provider: () => new HDWalletProvider(process.env.PRIVATE_KEY, `https://indranet-rpc.selendra.org/`),
       network_id: 222,
     }
     // Useful for testing. The `development` name is special - truffle uses it by default
